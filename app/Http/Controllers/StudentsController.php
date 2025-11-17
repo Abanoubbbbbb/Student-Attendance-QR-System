@@ -1,18 +1,22 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Student;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Requests\StoreStudentRequest;
+use App\Http\Requests\FilterStudentRequest;
+use SebastianBergmann\CodeCoverage\Filter;
 use Symfony\Component\HttpKernel\HttpCache\Store;
 
 class StudentsController extends Controller
 {
     public function index()
 
-    {        $students = Student::all();
+    {
+        $students = Student::all();
         return view('students.index', compact('students'));
     }
 
@@ -24,75 +28,75 @@ class StudentsController extends Controller
 
 
 
-   public function store( StoreStudentRequest $request)
-{
-    $student=Student::create($request->validate());
+    public function store(StoreStudentRequest $request)
+    {
+        $student = Student::create($request->validated());
 
 
-    return redirect()->route('students.show', $student->id)
-        ->with('success', 'تم إضافة الطالب بنجاح وتوليد QR code له');
-}
+        return redirect()->route('students.show', $student->id)
+            ->with('success', 'تم إضافة الطالب بنجاح وتوليد QR code له');
+    }
 
 
-        public function show($id)
+    public function show($id)
     {
         $student = Student::findOrFail($id);
         return view('students.show', compact('student'));
     }
 
-public function showQrCode($id)
-{
-    $student = Student::findOrFail($id);
+    public function showQrCode($id)
+    {
+        $student = Student::findOrFail($id);
 
-    // الرابط يحتوي على QR code parameter
-    $url = route('attendance.autoScan', ['qr_code' => $student->qr_code]);
+        // الرابط يحتوي على QR code parameter
+        $url = route('attendance.autoScan', ['qr_code' => $student->qr_code]);
 
-    $qrCode = QrCode::size(300)->generate($url);
+        $qrCode = QrCode::size(300)->generate($url);
 
-    return view('students.qrcode', compact('student', 'qrCode'));
-}
-public function cards(Request $request)
-{
-    $query = Student::query();
+        return view('students.qrcode', compact('student', 'qrCode'));
+    }
+    public function cards(FilterStudentRequest $request)
+    {
+        $query = Student::query();
 
-    if ($request->filled('stage')) {
-        $query->where('stage', $request->input('stage'));
+        if ($request->filled('stage')) {
+            $query->where('stage', $request->stage);
+        }
+
+        if ($request->filled('class')) {
+            $query->where('class', $request->class);
+        }
+
+        if ($request->filled('name')) {
+            $query->where('name', 'like', '%' . $request->name . '%');
+        }
+
+        // اجلب فقط البيانات المطلوبة
+        $students = $query->orderBy('name')->paginate(12); // 12 فقط لكل صفحة
+
+        return view('students.cards', compact('students'));
     }
 
-    if ($request->filled('class')) {
-        $query->where('class', $request->input('class'));
+    public function cardsPdf(FilterStudentRequest $request)
+    {
+        $query = Student::query();
+
+        if ($request->filled('stage')) {
+            $query->where('stage', $request->stage);
+        }
+
+        if ($request->filled('class')) {
+            $query->where('class', $request->class);
+        }
+
+        if ($request->filled('name')) {
+            $query->where('name', 'like', '%' . $request->name . '%');
+        }
+
+        $students = $query->orderBy('name')->get(); // بدون paginate لأننا هنعمل PDF كامل
+
+        $pdf = Pdf::loadView('students.cards_pdf', compact('students'));
+
+        return $pdf->download('بطاقات_الطلاب.pdf');
     }
-
-    if ($request->filled('name')) {
-        $query->where('name', 'like', '%' . $request->input('name') . '%');
-    }
-
-    // اجلب فقط البيانات المطلوبة
-    $students = $query->orderBy('name')->paginate(12); // 12 فقط لكل صفحة
-
-    return view('students.cards', compact('students'));
-}
-
-public function cardsPdf(Request $request)
-{
-    $query = Student::query();
-
-    if ($request->filled('stage')) {
-        $query->where('stage', $request->stage);
-    }
-
-    if ($request->filled('class')) {
-        $query->where('class', $request->class);
-    }
-
-    if ($request->filled('name')) {
-        $query->where('name', 'like', '%' . $request->name . '%');
-    }
-
-    $students = $query->orderBy('name')->get(); // بدون paginate لأننا هنعمل PDF كامل
-
-    $pdf = Pdf::loadView('students.cards_pdf', compact('students'));
-
-    return $pdf->download('بطاقات_الطلاب.pdf');
-}
 }
