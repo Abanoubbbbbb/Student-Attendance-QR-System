@@ -5,7 +5,8 @@ use App\Models\Student;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
-
+use App\Http\Requests\StoreStudentRequest;
+use Symfony\Component\HttpKernel\HttpCache\Store;
 
 class StudentsController extends Controller
 {
@@ -23,24 +24,10 @@ class StudentsController extends Controller
 
 
 
-   public function store(Request $request)
+   public function store( StoreStudentRequest $request)
 {
-    $request->validate([
-        'student_code' => 'required|unique:students',
-        'name' => 'required',
-        'stage' => 'required',
-        'class' => 'required',
-    ]);
+    $student=Student::create($request->validate());
 
-    // استخدم create بالمصفوفة فقط
-    $student = Student::create([
-        'student_code' => $request->student_code,
-        'name' => $request->name,
-        'stage' => $request->stage,
-        'phone' => $request->phone,
-        'class' => $request->class,
-        // ملاحظة: مش محتاج نمرر qr_code، هيتولد تلقائي
-    ]);
 
     return redirect()->route('students.show', $student->id)
         ->with('success', 'تم إضافة الطالب بنجاح وتوليد QR code له');
