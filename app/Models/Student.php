@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Notifications\Notifiable;
 
 class Student extends Model
 {
-    use HasFactory;
+    use HasFactory, Notifiable;
 
     protected $fillable = [
         'student_code',
@@ -33,7 +34,7 @@ class Student extends Model
 
         // بعد حفظ الطالب، توليد وحفظ ملف SVG للـ QR
         static::created(function ($student) {
-              $qrContent = url('/attendance/auto-scan?qr_code=' . $student->qr_code);
+            $qrContent = url('/attendance/auto-scan?qr_code=' . $student->qr_code);
 
             $svg = QrCode::format('svg')->size(300)->generate($qrContent);
 
